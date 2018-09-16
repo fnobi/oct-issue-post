@@ -6,6 +6,8 @@ const _ = require("lodash");
 const argv = require("minimist")(process.argv.slice(2));
 require("colors");
 
+const reducer = require("./reducer");
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -21,26 +23,6 @@ const baseOpts = {
 
 octokit.authenticate(require("./auth.json"));
 
-// TODO: 外部化
-function reducer([
-  tracker,
-  status,
-  priority,
-  date,
-  assignee,
-  category,
-  title,
-  body
-]) {
-  const dateTag = date ? `期日: ${date}` : null;
-  const priorityTag = priority ? `優先度: ${priority}` : null;
-  return {
-    title,
-    body: _.compact([dateTag, priorityTag, body]).join("\n"),
-    labels: _.compact(["design", category, dateTag, priorityTag])
-  };
-}
-
 function loadCsv(filePath) {
   return fs.readFile(filePath, "utf8").then(body => {
     return new Promise((resolve, reject) => {
@@ -55,8 +37,9 @@ function loadCsv(filePath) {
   });
 }
 
-function postIssue(issueOpts) {
+function postIssue(row) {
   return new Promise((resolve, reject) => {
+    const issueOpts = reducer(row);
     const opts = Object.assign({}, baseOpts, issueOpts);
     console.log(opts);
 
@@ -78,7 +61,7 @@ loadCsv(csv).then(rows => {
   let p = Promise.resolve();
   _.each(rows, row => {
     p = p.then(() => {
-      return postIssue(reducer(row));
+      return postIssue(row);
     });
   });
   p.then(() => {
