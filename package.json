@@ -3,5 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "Fujisawa Shin",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/rest": "^15.11.3",
+    "minimist": "^1.2.0"
+  },
+  "devDependencies": {}
 }
