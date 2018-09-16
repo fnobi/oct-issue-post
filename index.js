@@ -1,8 +1,15 @@
+const readline = require("readline");
 const octokit = require("@octokit/rest")();
 const parse = require("csv-parse");
 const fs = require("mz/fs");
 const _ = require("lodash");
 const argv = require("minimist")(process.argv.slice(2));
+require("colors");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
 const [target, csv] = argv._;
 const [owner, repo] = target.split(/\//);
@@ -29,11 +36,7 @@ function reducer([
   const priorityTag = priority ? `優先度: ${priority}` : null;
   return {
     title,
-    body: _.compact([
-      dateTag,
-      priorityTag,
-      body
-    ]).join("\n"),
+    body: _.compact([dateTag, priorityTag, body]).join("\n"),
     labels: _.compact(["design", category, dateTag, priorityTag])
   };
 }
@@ -53,23 +56,32 @@ function loadCsv(filePath) {
 }
 
 function postIssue(issueOpts) {
-  const opts = Object.assign({}, baseOpts, issueOpts);
+  return new Promise((resolve, reject) => {
+    const opts = Object.assign({}, baseOpts, issueOpts);
+    console.log(opts);
 
-  console.log(opts);
+    const msg = ["Do you create issue with this option?".green, "[Y|n]"].join(
+      " "
+    );
 
-  return Promise.resolve();
-  /*
-  octokit.issues.create(opts).then((result) => {
-    console.log(result);
+    rl.question(msg, answer => {
+      if (answer === "Y") {
+        octokit.issues.create(opts).then(resolve, reject);
+      } else {
+        resolve();
+      }
+    });
   });
-  */
 }
 
 loadCsv(csv).then(rows => {
   let p = Promise.resolve();
-  _.each(rows, (row) => {
+  _.each(rows, row => {
     p = p.then(() => {
       return postIssue(reducer(row));
     });
+  });
+  p.then(() => {
+    rl.close();
   });
 });
