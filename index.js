@@ -1,9 +1,10 @@
 const octokit = require("@octokit/rest")();
+const parse = require("csv-parse");
+const fs = require("mz/fs");
+const _ = require("lodash");
 const argv = require("minimist")(process.argv.slice(2));
 
-octokit.authenticate(require("./auth.json"));
-
-const [target] = argv._;
+const [target, csv] = argv._;
 const [owner, repo] = target.split(/\//);
 
 const baseOpts = {
@@ -11,17 +12,64 @@ const baseOpts = {
   repo
 };
 
-const opts = Object.assign({}, baseOpts, {
-  title: "test",
-  body: ["テスト本文", "二行以上の文章"].join("\n"),
-  // assignee: 'fnobi',
-  labels: ["design"]
-});
+octokit.authenticate(require("./auth.json"));
 
-console.log(opts);
+// TODO: 外部化
+function reducer([
+  tracker,
+  status,
+  priority,
+  date,
+  assignee,
+  category,
+  title,
+  body
+]) {
+  const dateTag = date ? `期日: ${date}` : null;
+  const priorityTag = priority ? `優先度: ${priority}` : null;
+  return {
+    title,
+    body: _.compact([
+      dateTag,
+      priorityTag,
+      body
+    ]).join("\n"),
+    labels: _.compact(["design", category, dateTag, priorityTag])
+  };
+}
 
-/*
-octokit.issues.create(opts).then((result) => {
-  console.log(result);
+function loadCsv(filePath) {
+  return fs.readFile(filePath, "utf8").then(body => {
+    return new Promise((resolve, reject) => {
+      parse(body, { comment: "#" }, (err, output) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(output);
+      });
+    });
+  });
+}
+
+function postIssue(issueOpts) {
+  const opts = Object.assign({}, baseOpts, issueOpts);
+
+  console.log(opts);
+
+  return Promise.resolve();
+  /*
+  octokit.issues.create(opts).then((result) => {
+    console.log(result);
+  });
+  */
+}
+
+loadCsv(csv).then(rows => {
+  let p = Promise.resolve();
+  _.each(rows, (row) => {
+    p = p.then(() => {
+      return postIssue(reducer(row));
+    });
+  });
 });
-*/

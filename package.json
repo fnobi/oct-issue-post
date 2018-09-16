@@ -6,7 +6,10 @@
   "license": "MIT",
   "dependencies": {
     "@octokit/rest": "^15.11.3",
-    "minimist": "^1.2.0"
+    "csv-parse": "^3.0.0",
+    "lodash": "^4.17.11",
+    "minimist": "^1.2.0",
+    "mz": "^2.7.0"
   },
   "devDependencies": {}
 }
